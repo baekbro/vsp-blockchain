@@ -1,12 +1,13 @@
 const express = require("express");
 const router = express.Router();
 const pool = require("../db");
-require("dotenv").config();
+require("dotenv").config({ path: __dirname + '/../.env' });
 const { ethers } = require("ethers");
 
 // 배포된 토큰의 주소와 ABI
 const TOKEN_ADDRESS = process.env.TOKEN_ADDRESS;
-const tokenABI = require("../abi/MyToken.json"); // ABI 경로 확인
+const tokenABI = require("../../artifacts/contracts/MyToken.sol/MyToken.json").abi;
+
 
 router.post("/send", async (req, res) => {
   const { userAddress, amount } = req.body;
