@@ -53,5 +53,9 @@ router.post("/login", async (req, res) => {
   }
 });
 
+router.post("/register", async (req, res) => {
+  const { walletAddress, password } = req.body;
+  // 회원가입 로직
+});
 
 module.exports = router;

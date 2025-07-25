@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>VSP Blockchain Test</title>
+</head>
+<body>
+  <h1>VSP Blockchain 테스트</h1>
+
+  <!-- 회원가입 -->
+  <section>
+    <h2>회원가입</h2>
+    <input type="text" id="regEmail" placeholder="이메일"><br>
+    <input type="password" id="regPassword" placeholder="비밀번호"><br>
+    <button onclick="register()">회원가입</button>
+    <p id="registerResult"></p>
+  </section>
+
+  <!-- 로그인 -->
+  <section>
+    <h2>로그인</h2>
+    <input type="text" id="loginEmail" placeholder="이메일"><br>
+    <input type="password" id="loginPassword" placeholder="비밀번호"><br>
+    <button onclick="login()">로그인</button>
+    <p id="loginResult"></p>
+  </section>
+
+  <!-- 토큰 전송 -->
+  <section>
+    <h2>토큰 전송</h2>
+    <input type="text" id="receiverAddress" placeholder="받는 사람 주소"><br>
+    <input type="number" id="amount" placeholder="전송 수량"><br>
+    <button onclick="sendToken()">전송</button>
+    <p id="sendResult"></p>
+  </section>
+
+  <!-- 잔액 확인 -->
+  <section>
+    <h2>잔액 확인</h2>
+    <input type="text" id="checkAddress" placeholder="지갑 주소"><br>
+    <button onclick="checkBalance()">잔액 조회</button>
+    <p id="balanceResult"></p>
+  </section>
+
+  <script>
+    let token = "";
+    let myWallet = "";
+
+    async function register() {
+      const email = document.getElementById("regEmail").value;
+      const password = document.getElementById("regPassword").value;
+      const res = await fetch("http://localhost:3001/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password })
+      });
+      const data = await res.json();
+      document.getElementById("registerResult").innerText = JSON.stringify(data);
+    }
+
+    async function login() {
+      const email = document.getElementById("loginEmail").value;
+      const password = document.getElementById("loginPassword").value;
+      const res = await fetch("http://localhost:3001/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password })
+      });
+      const data = await res.json();
+      if (data.token) {
+        token = data.token;
+        myWallet = data.walletAddress;
+        document.getElementById("loginResult").innerText = `로그인 성공! 지갑주소: ${myWallet}`;
+      } else {
+        document.getElementById("loginResult").innerText = "로그인 실패";
+      }
+    }
+
+    async function sendToken() {
+      if (!token) return alert("먼저 로그인하세요.");
+      const userAddress = document.getElementById("receiverAddress").value;
+      const amount = parseFloat(document.getElementById("amount").value);
+      const res = await fetch("http://localhost:3001/api/token/send", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ userAddress, amount })
+      });
+      const data = await res.json();
+      document.getElementById("sendResult").innerText = JSON.stringify(data);
+    }
+
+    async function checkBalance() {
+      const address = document.getElementById("checkAddress").value;
+      const res = await fetch(`http://localhost:3001/api/token/balance?address=${address}`);
+      const data = await res.json();
+      document.getElementById("balanceResult").innerText = `잔액: ${data.balance || "조회 실패"}`;
+    }
+  </script>
+</body>
+</html>
