@@ -70,56 +70,107 @@
     let myWallet = "";
 
     async function register() {
-      const email = document.getElementById("regEmail").value;
+      const email = document.getElementById("regEmail").value.trim();
       const password = document.getElementById("regPassword").value;
-      const res = await fetch("http://localhost:3001/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password })
-      });
-      const data = await res.json();
-      document.getElementById("registerResult").innerText = JSON.stringify(data);
+
+      try {
+        const res = await fetch("http://localhost:3001/api/auth/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password })
+        });
+
+        const data = await res.json();
+        document.getElementById("registerResult").innerText = JSON.stringify(data);
+      } catch (err) {
+        document.getElementById("registerResult").innerText = "회원가입 실패: " + err.message;
+      }
     }
 
     async function login() {
-      const email = document.getElementById("loginEmail").value;
+      const email = document.getElementById("loginEmail").value.trim();
       const password = document.getElementById("loginPassword").value;
-      const res = await fetch("http://localhost:3001/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password })
-      });
-      const data = await res.json();
-      if (data.token) {
-        token = data.token;
-        myWallet = data.walletAddress;
-        document.getElementById("loginResult").innerText = `로그인 성공! 지갑주소: ${myWallet}`;
-      } else {
-        document.getElementById("loginResult").innerText = "로그인 실패";
+
+      try {
+        const res = await fetch("http://localhost:3001/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password })
+        });
+
+        if (!res.ok) {
+          const errText = await res.text();
+          throw new Error(errText);
+        }
+
+        const data = await res.json();
+        if (data.token) {
+          token = data.token;
+          myWallet = data.walletAddress;
+          document.getElementById("loginResult").innerText = `로그인 성공! 지갑주소: ${myWallet}`;
+        } else {
+          document.getElementById("loginResult").innerText = "로그인 실패";
+        }
+      } catch (err) {
+        document.getElementById("loginResult").innerText = "로그인 에러: " + err.message;
       }
     }
 
     async function sendToken() {
       if (!token) return alert("먼저 로그인하세요.");
-      const userAddress = document.getElementById("receiverAddress").value;
+
+      const userAddress = document.getElementById("receiverAddress").value.trim();
       const amount = parseFloat(document.getElementById("amount").value);
-      const res = await fetch("http://localhost:3001/api/token/send", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify({ userAddress, amount })
-      });
-      const data = await res.json();
-      document.getElementById("sendResult").innerText = JSON.stringify(data);
+
+      if (!userAddress || isNaN(amount) || amount <= 0) {
+        return alert("올바른 주소와 수량을 입력하세요.");
+      }
+
+      if (userAddress === myWallet) {
+        return alert("자기 자신의 지갑으로는 토큰을 전송할 수 없습니다.");
+      }
+
+      try {
+        const res = await fetch("http://localhost:3001/api/token/send", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify({ userAddress, amount })
+        });
+
+        if (!res.ok) {
+          const errText = await res.text();
+          throw new Error(errText);
+        }
+
+        const data = await res.json();
+        document.getElementById("sendResult").innerText = `전송 성공! TX Hash: ${data.txHash}`;
+      } catch (err) {
+        document.getElementById("sendResult").innerText = "전송 실패: " + err.message;
+      }
     }
 
     async function checkBalance() {
-      const address = document.getElementById("checkAddress").value;
-      const res = await fetch(`http://localhost:3001/api/token/balance?address=${address}`);
-      const data = await res.json();
-      document.getElementById("balanceResult").innerText = `잔액: ${data.balance || "조회 실패"}`;
+      const address = document.getElementById("checkAddress").value.trim();
+
+      if (!address) {
+        return alert("주소를 입력하세요.");
+      }
+
+      try {
+        const res = await fetch(`http://localhost:3001/api/token/balance?address=${address}`);
+        const data = await res.json();
+
+        if (data.balance !== undefined) {
+          document.getElementById("balanceResult").innerText = `잔액: ${data.balance}`;
+        } else {
+          document.getElementById("balanceResult").innerText = "잔액 조회 실패";
+        }
+      } catch (err) {
+        document.getElementById("balanceResult").innerText = "오류: " + err.message;
+      }
     }
   </script>
 </body>

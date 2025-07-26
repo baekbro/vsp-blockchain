@@ -5,22 +5,25 @@ require("dotenv").config();
 const { authenticateToken, authenticateAdmin } = require("../middleware/auth");
 const User = require("../models/User");
 
-// ✅ 여기 수정
+// ABI 및 Provider 설정
 const tokenJson = require("../abi/MyToken.json");
 const tokenAbi = tokenJson.abi;
-
 const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
 const tokenAddress = process.env.TOKEN_ADDRESS;
 const tokenContract = new ethers.Contract(tokenAddress, tokenAbi, provider);
 
-
-// ✅ 사용자: 자기 지갑으로 토큰 전송
+// ✅ 사용자: 자기 지갑으로 토큰 전송 (보안 로직 추가됨)
 router.post("/send", authenticateToken, async (req, res) => {
   const { userAddress, amount } = req.body;
   const sender = await User.findOne({ where: { email: req.user.email } });
 
   if (!sender || !sender.privateKey) {
     return res.status(403).json({ error: "지갑이 없습니다." });
+  }
+
+  // 🔐 자기 자신에게 전송 시도 차단
+  if (userAddress.toLowerCase() === sender.wallet_address.toLowerCase()) {
+    return res.status(400).json({ error: "자기 자신에게 전송할 수 없습니다." });
   }
 
   try {
@@ -68,7 +71,7 @@ router.post("/admin/mint", authenticateAdmin, async (req, res) => {
 router.get("/admin/users", authenticateAdmin, async (req, res) => {
   try {
     const users = await User.findAll({
-      attributes: ["id", "email", "walletAddress"]
+      attributes: ["id", "email", "wallet_address"]
     });
     res.json(users);
   } catch (err) {
