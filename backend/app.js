@@ -22,6 +22,20 @@ app.use(express.json());
 app.use("/api/auth", authRoutes);
 app.use("/api/token", tokenRoutes);
 
+// backend/app.js
+const sequelize = require('./config/db');
+// ... 기존 코드 생략
+
+sequelize.sync().then(() => {
+  console.log("✅ DB 연결 및 모델 동기화 완료");
+  app.listen(PORT, () => {
+    console.log(`🚀 서버 실행 중: http://localhost:${PORT}`);
+  });
+}).catch((err) => {
+  console.error("❌ DB 연결 실패:", err);
+});
+
+
 const PORT = 3001;
 app.listen(PORT, () => {
   console.log(`🚀 서버 실행 중: http://localhost:${PORT}`);

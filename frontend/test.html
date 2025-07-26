@@ -1,43 +1,66 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>VSP Blockchain Test</title>
+  <title>VSP Blockchain 테스트</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+      max-width: 500px;
+      margin: auto;
+    }
+    section {
+      border: 1px solid #ccc;
+      padding: 15px;
+      margin-bottom: 20px;
+      border-radius: 10px;
+    }
+    input {
+      margin: 5px 0;
+      width: 100%;
+      padding: 8px;
+    }
+    button {
+      margin-top: 10px;
+      padding: 10px;
+      width: 100%;
+    }
+    h2 {
+      margin-top: 0;
+    }
+  </style>
 </head>
 <body>
   <h1>VSP Blockchain 테스트</h1>
 
-  <!-- 회원가입 -->
   <section>
     <h2>회원가입</h2>
-    <input type="text" id="regEmail" placeholder="이메일"><br>
-    <input type="password" id="regPassword" placeholder="비밀번호"><br>
+    <input type="text" id="regEmail" placeholder="이메일">
+    <input type="password" id="regPassword" placeholder="비밀번호">
     <button onclick="register()">회원가입</button>
     <p id="registerResult"></p>
   </section>
 
-  <!-- 로그인 -->
   <section>
     <h2>로그인</h2>
-    <input type="text" id="loginEmail" placeholder="이메일"><br>
-    <input type="password" id="loginPassword" placeholder="비밀번호"><br>
+    <input type="text" id="loginEmail" placeholder="이메일">
+    <input type="password" id="loginPassword" placeholder="비밀번호">
     <button onclick="login()">로그인</button>
     <p id="loginResult"></p>
   </section>
 
-  <!-- 토큰 전송 -->
   <section>
     <h2>토큰 전송</h2>
-    <input type="text" id="receiverAddress" placeholder="받는 사람 주소"><br>
-    <input type="number" id="amount" placeholder="전송 수량"><br>
+    <input type="text" id="receiverAddress" placeholder="받는 사람 주소">
+    <input type="number" id="amount" placeholder="전송 수량">
     <button onclick="sendToken()">전송</button>
     <p id="sendResult"></p>
   </section>
 
-  <!-- 잔액 확인 -->
   <section>
     <h2>잔액 확인</h2>
-    <input type="text" id="checkAddress" placeholder="지갑 주소"><br>
+    <input type="text" id="checkAddress" placeholder="지갑 주소">
     <button onclick="checkBalance()">잔액 조회</button>
     <p id="balanceResult"></p>
   </section>

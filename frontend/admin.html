@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>관리자 페이지 - VSP Blockchain</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f7f7f7;
+      padding: 20px;
+    }
+    h1 {
+      color: #333;
+    }
+    section {
+      background-color: #fff;
+      padding: 15px;
+      margin-bottom: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.1);
+    }
+    input, button {
+      padding: 8px;
+      margin-top: 5px;
+      margin-bottom: 10px;
+      width: 100%;
+    }
+    button {
+      cursor: pointer;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      padding: 8px;
+      border: 1px solid #ccc;
+    }
+  </style>
+</head>
+<body>
+  <h1>관리자 대시보드</h1>
+
+  <!-- 토큰 발행 -->
+  <section>
+    <h2>토큰 발행</h2>
+    <input type="number" id="mintAmount" placeholder="발행 수량"><br>
+    <button onclick="mintToken()">발행</button>
+    <p id="mintResult"></p>
+  </section>
+
+  <!-- 사용자 목록 -->
+  <section>
+    <h2>사용자 목록</h2>
+    <button onclick="loadUsers()">불러오기</button>
+    <table>
+      <thead>
+        <tr><th>이메일</th><th>지갑 주소</th></tr>
+      </thead>
+      <tbody id="userTable"></tbody>
+    </table>
+  </section>
+
+  <!-- 사용자에게 토큰 전송 -->
+  <section>
+    <h2>사용자 지갑에 토큰 전송</h2>
+    <input type="text" id="targetAddress" placeholder="사용자 지갑 주소"><br>
+    <input type="number" id="sendAmount" placeholder="전송 수량"><br>
+    <button onclick="sendToUser()">전송</button>
+    <p id="sendUserResult"></p>
+  </section>
+
+  <script>
+    const token = localStorage.getItem('adminToken') || prompt("관리자 토큰을 입력하세요:");
+
+    async function mintToken() {
+      const amount = parseFloat(document.getElementById("mintAmount").value);
+      const res = await fetch("http://localhost:3001/api/admin/mint", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ amount })
+      });
+      const data = await res.json();
+      document.getElementById("mintResult").innerText = JSON.stringify(data);
+    }
+
+    async function loadUsers() {
+      const res = await fetch("http://localhost:3001/api/admin/users", {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      const users = await res.json();
+      const table = document.getElementById("userTable");
+      table.innerHTML = "";
+      users.forEach(user => {
+        const row = `<tr><td>${user.email}</td><td>${user.walletAddress}</td></tr>`;
+        table.innerHTML += row;
+      });
+    }
+
+    async function sendToUser() {
+      const userAddress = document.getElementById("targetAddress").value;
+      const amount = parseFloat(document.getElementById("sendAmount").value);
+      const res = await fetch("http://localhost:3001/api/admin/send", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ userAddress, amount })
+      });
+      const data = await res.json();
+      document.getElementById("sendUserResult").innerText = JSON.stringify(data);
+    }
+  </script>
+</body>
+</html>

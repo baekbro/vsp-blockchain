@@ -1,55 +1,95 @@
 const express = require("express");
 const router = express.Router();
-const pool = require("../db");
-require("dotenv").config({ path: __dirname + '/../.env' });
 const { ethers } = require("ethers");
+require("dotenv").config();
+const { authenticateToken, authenticateAdmin } = require("../middleware/auth");
+const User = require("../models/User");
 
-// 배포된 토큰의 주소와 ABI
-const TOKEN_ADDRESS = process.env.TOKEN_ADDRESS;
-const tokenABI = require("../../artifacts/contracts/MyToken.sol/MyToken.json").abi;
+// ✅ 여기 수정
+const tokenJson = require("../abi/MyToken.json");
+const tokenAbi = tokenJson.abi;
+
+const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
+const tokenAddress = process.env.TOKEN_ADDRESS;
+const tokenContract = new ethers.Contract(tokenAddress, tokenAbi, provider);
 
 
-router.post("/send", async (req, res) => {
+// ✅ 사용자: 자기 지갑으로 토큰 전송
+router.post("/send", authenticateToken, async (req, res) => {
   const { userAddress, amount } = req.body;
+  const sender = await User.findOne({ where: { email: req.user.email } });
+
+  if (!sender || !sender.privateKey) {
+    return res.status(403).json({ error: "지갑이 없습니다." });
+  }
 
   try {
-    // 프로바이더와 지갑 객체 생성
-    const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
-    const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
+    const wallet = new ethers.Wallet(sender.privateKey, provider);
+    const contractWithSigner = tokenContract.connect(wallet);
 
-    // 컨트랙트 인스턴스 생성
-    const token = new ethers.Contract(TOKEN_ADDRESS, tokenABI, wallet);
-
-    // 토큰 전송
-    const tx = await token.transfer(userAddress, ethers.parseUnits(amount.toString(), 18));
+    const tx = await contractWithSigner.transfer(userAddress, ethers.parseEther(amount.toString()));
     await tx.wait();
 
-    // DB 업데이트
-    await pool.query(
-      "UPDATE users SET token_balance = token_balance + ? WHERE wallet_address = ?",
-      [amount, userAddress]
-    );
-
-    res.json({ message: "토큰 전송 완료", txHash: tx.hash });
+    return res.json({ success: true, txHash: tx.hash });
   } catch (err) {
-    console.error("🔴 토큰 전송 실패:", err);
-    res.status(500).json({ error: "토큰 전송 실패", reason: err.message });
+    return res.status(500).json({ error: "토큰 전송 실패", reason: err.message });
   }
 });
 
+// ✅ 사용자: 잔액 조회
 router.get("/balance", async (req, res) => {
-  const address = req.query.address;
+  const { address } = req.query;
+  try {
+    const balance = await tokenContract.balanceOf(address);
+    res.json({ balance: ethers.formatEther(balance) });
+  } catch (err) {
+    res.status(500).json({ error: "잔액 조회 실패", reason: err.message });
+  }
+});
+
+// ✅ 관리자: 토큰 발행 (Mint)
+router.post("/admin/mint", authenticateAdmin, async (req, res) => {
+  const { toAddress, amount } = req.body;
 
   try {
-    const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
-    const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
-    const token = new ethers.Contract(TOKEN_ADDRESS, tokenABI, wallet);
+    const adminWallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
+    const contractWithAdmin = tokenContract.connect(adminWallet);
 
-    const balance = await token.balanceOf(address);
-    res.json({ balance: ethers.formatUnits(balance, 18) });
+    const tx = await contractWithAdmin.mint(toAddress, ethers.parseEther(amount.toString()));
+    await tx.wait();
+
+    res.json({ success: true, txHash: tx.hash });
   } catch (err) {
-    console.error("🔴 잔액 조회 실패:", err);
-    res.status(500).json({ error: "잔액 조회 실패", reason: err.message });
+    res.status(500).json({ error: "토큰 발행 실패", reason: err.message });
+  }
+});
+
+// ✅ 관리자: 사용자 목록 조회
+router.get("/admin/users", authenticateAdmin, async (req, res) => {
+  try {
+    const users = await User.findAll({
+      attributes: ["id", "email", "walletAddress"]
+    });
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ error: "사용자 목록 조회 실패", reason: err.message });
+  }
+});
+
+// ✅ 관리자: 특정 사용자 지갑에 토큰 전송
+router.post("/admin/transfer", authenticateAdmin, async (req, res) => {
+  const { toAddress, amount } = req.body;
+
+  try {
+    const adminWallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
+    const contractWithAdmin = tokenContract.connect(adminWallet);
+
+    const tx = await contractWithAdmin.transfer(toAddress, ethers.parseEther(amount.toString()));
+    await tx.wait();
+
+    res.json({ success: true, txHash: tx.hash });
+  } catch (err) {
+    res.status(500).json({ error: "토큰 전송 실패", reason: err.message });
   }
 });
 
